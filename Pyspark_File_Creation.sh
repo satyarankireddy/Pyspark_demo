@@ -1,2 +1,2 @@
 cd /home/hadoop
-spark-submit test_wordcount.py
+sudo sh spark-submit test_wordcount.py
