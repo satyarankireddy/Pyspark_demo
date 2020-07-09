@@ -4,5 +4,4 @@ sudo yum -y install jenkins
 
 sudo service jenkins start
 
-sudo tail -f -n 100 /var/log/jenkins/jenkins.log
 
