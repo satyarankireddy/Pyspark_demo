@@ -8,18 +8,18 @@ if __name__ == "__main__":
 	sc = SparkContext("local","PySpark Word Count Exmaple")
 	
 	# read data from text file and split each line into words
-	words = sc.textFile('file:////home/hadoop/data.txt').flatMap(lambda line: line.split(" "))
+	words = sc.textFile('file:////home/ubuntu/Github/Pyspark_demo/data.txt').flatMap(lambda line: line.split(" "))
 	
 	# count the occurrence of each word
 	wordCounts = words.map(lambda word: (word, 1)).reduceByKey(lambda a,b:a +b)
 	
 	# save the counts to output
-	wordCounts.saveAsTextFile('file:////home/hadoop/output/')
+	wordCounts.saveAsTextFile('file:////home/ubuntu/Github/Pyspark_demo/output/')
 
 import pyspark
 sc = pyspark.SparkContext('local[*]')
 
-txt = sc.textFile('file:////home/hadoop/data.txt')
+txt = sc.textFile('file:////home/ubuntu/Github/Pyspark_demo/data.txt')
 
 python_lines = txt.filter(lambda line: 'python' in line.lower())
 

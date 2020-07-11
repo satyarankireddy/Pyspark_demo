@@ -1,64 +1,55 @@
-FROM debian:stretch
-MAINTAINER Getty Images "https://github.com/gettyimages"
+FROM openjdk:8
 
-RUN apt-get update \
- && apt-get install -y locales \
- && dpkg-reconfigure -f noninteractive locales \
- && locale-gen C.UTF-8 \
- && /usr/sbin/update-locale LANG=C.UTF-8 \
- && echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen \
- && locale-gen \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+MAINTAINER Satya Rankireddy <satyainfosys@gmail.com>
 
-# Users with other locales should set this in their derivative image
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US:en
-ENV LC_ALL en_US.UTF-8
+# Scala related variables.
+ARG SCALA_VERSION=2.12.2
+ARG SCALA_BINARY_ARCHIVE_NAME=scala-${SCALA_VERSION}
+ARG SCALA_BINARY_DOWNLOAD_URL=http://downloads.lightbend.com/scala/${SCALA_VERSION}/${SCALA_BINARY_ARCHIVE_NAME}.tgz
 
-RUN apt-get update \
- && apt-get install -y curl unzip \
-    python3 python3-setuptools \
- && ln -s /usr/bin/python3 /usr/bin/python \
- && easy_install3 pip py4j \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+# SBT related variables.
+ARG SBT_VERSION=0.13.15
+ARG SBT_BINARY_ARCHIVE_NAME=sbt-$SBT_VERSION
+ARG SBT_BINARY_DOWNLOAD_URL=https://dl.bintray.com/sbt/native-packages/sbt/${SBT_VERSION}/${SBT_BINARY_ARCHIVE_NAME}.tgz
 
-# http://blog.stuart.axelbrooke.com/python-3-on-spark-return-of-the-pythonhashseed
-ENV PYTHONHASHSEED 0
-ENV PYTHONIOENCODING UTF-8
-ENV PIP_DISABLE_PIP_VERSION_CHECK 1
+# Spark related variables.
+ARG SPARK_VERSION=2.2.0
+ARG SPARK_BINARY_ARCHIVE_NAME=spark-${SPARK_VERSION}-bin-hadoop2.7
+ARG SPARK_BINARY_DOWNLOAD_URL=http://d3kbcqa49mib13.cloudfront.net/${SPARK_BINARY_ARCHIVE_NAME}.tgz
 
-# JAVA
-RUN apt-get update \
- && apt-get install -y openjdk-8-jre \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+# Configure env variables for Scala, SBT and Spark.
+# Also configure PATH env variable to include binary folders of Java, Scala, SBT and Spark.
+ENV SCALA_HOME  /usr/local/scala
+ENV SBT_HOME    /usr/local/sbt
+ENV SPARK_HOME  /usr/local/spark
+ENV PATH        $JAVA_HOME/bin:$SCALA_HOME/bin:$SBT_HOME/bin:$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH
 
-# HADOOP
-ENV HADOOP_VERSION 3.0.0
-ENV HADOOP_HOME /usr/hadoop-$HADOOP_VERSION
-ENV HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
-ENV PATH $PATH:$HADOOP_HOME/bin
-RUN curl -sL --retry 3 \
-  "http://archive.apache.org/dist/hadoop/common/hadoop-$HADOOP_VERSION/hadoop-$HADOOP_VERSION.tar.gz" \
-  | gunzip \
-  | tar -x -C /usr/ \
- && rm -rf $HADOOP_HOME/share/doc \
- && chown -R root:root $HADOOP_HOME
+# Download, uncompress and move all the required packages and libraries to their corresponding directories in /usr/local/ folder.
+RUN apt-get -yqq update && \
+    apt-get install -yqq vim screen tmux && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    rm -rf /tmp/* && \
+    wget -qO - ${SCALA_BINARY_DOWNLOAD_URL} | tar -xz -C /usr/local/ && \
+    wget -qO - ${SBT_BINARY_DOWNLOAD_URL} | tar -xz -C /usr/local/  && \
+    wget -qO - ${SPARK_BINARY_DOWNLOAD_URL} | tar -xz -C /usr/local/ && \
+    cd /usr/local/ && \
+    ln -s ${SCALA_BINARY_ARCHIVE_NAME} scala && \
+    ln -s ${SPARK_BINARY_ARCHIVE_NAME} spark && \
+    cp spark/conf/log4j.properties.template spark/conf/log4j.properties && \
+    sed -i -e s/WARN/ERROR/g spark/conf/log4j.properties && \
+    sed -i -e s/INFO/ERROR/g spark/conf/log4j.properties
 
-# SPARK
-ENV SPARK_VERSION 2.4.1
-ENV SPARK_PACKAGE spark-${SPARK_VERSION}-bin-without-hadoop
-ENV SPARK_HOME /usr/spark-${SPARK_VERSION}
-ENV SPARK_DIST_CLASSPATH="$HADOOP_HOME/etc/hadoop/*:$HADOOP_HOME/share/hadoop/common/lib/*:$HADOOP_HOME/share/hadoop/common/*:$HADOOP_HOME/share/hadoop/hdfs/*:$HADOOP_HOME/share/hadoop/hdfs/lib/*:$HADOOP_HOME/share/hadoop/hdfs/*:$HADOOP_HOME/share/hadoop/yarn/lib/*:$HADOOP_HOME/share/hadoop/yarn/*:$HADOOP_HOME/share/hadoop/mapreduce/lib/*:$HADOOP_HOME/share/hadoop/mapreduce/*:$HADOOP_HOME/share/hadoop/tools/lib/*"
-ENV PATH $PATH:${SPARK_HOME}/bin
-RUN curl -sL --retry 3 \
-  "https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/${SPARK_PACKAGE}.tgz" \
-  | gunzip \
-  | tar x -C /usr/ \
- && mv /usr/$SPARK_PACKAGE $SPARK_HOME \
- && chown -R root:root $SPARK_HOME
+# We will be running our Spark jobs as `root` user.
+USER root
 
-WORKDIR $SPARK_HOME
-CMD ["bin/spark-class", "org.apache.spark.deploy.master.Master"]
+# Working directory is set to the home folder of `root` user.
+WORKDIR /root
+
+# Expose ports for monitoring.
+# SparkContext web UI on 4040 -- only available for the duration of the application.
+# Spark master’s web UI on 8080.
+# Spark worker web UI on 8081.
+EXPOSE 5050 9090 9081
+
+CMD ["/bin/bash"]
