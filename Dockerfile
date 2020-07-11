@@ -47,9 +47,9 @@ USER root
 WORKDIR /root
 
 # Expose ports for monitoring.
-# SparkContext web UI on 4040 -- only available for the duration of the application.
-# Spark master’s web UI on 8080.
-# Spark worker web UI on 8081.
+# SparkContext web UI on 5050 -- only available for the duration of the application.
+# Spark master’s web UI on 9090.
+# Spark worker web UI on 9081.
 EXPOSE 5050 9090 9081
 
 CMD ["/bin/bash"]
