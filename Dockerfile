@@ -1,6 +1,6 @@
 FROM openjdk:8
 
-MAINTAINER Prashanth Babu <Prashanth.Babu@gmail.com>
+MAINTAINER Satya Ranki Reddy <satyainfosys@gmail.com>
 
 # Scala related variables.
 ARG SCALA_VERSION=2.12.2
