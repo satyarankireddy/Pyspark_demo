@@ -26,7 +26,7 @@ ENV PATH        $JAVA_HOME/bin:$SCALA_HOME/bin:$SBT_HOME/bin:$SPARK_HOME/bin:$SP
 
 # Download, uncompress and move all the required packages and libraries to their corresponding directories in /usr/local/ folder.
 RUN apt-get -yqq update && \
-    apt-get install -yqq vim screen tmux && \
+    apt-get install -yqq vim screen tmux python2.7 python-pip zip && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     rm -rf /tmp/* && \
@@ -39,13 +39,17 @@ RUN apt-get -yqq update && \
     cp spark/conf/log4j.properties.template spark/conf/log4j.properties && \
     sed -i -e s/WARN/ERROR/g spark/conf/log4j.properties && \
     sed -i -e s/INFO/ERROR/g spark/conf/log4j.properties
-
+    
 # We will be running our Spark jobs as `root` user.
 USER root
 
 # Working directory is set to the home folder of `root` user.
-WORKDIR /root
+WORKDIR /app
+COPY . .
 
+RUN pip2 install -r /app/PySpark-Boilerplate/dev_requirements.txt
+RUN zip install -r /app/PySpark-Boilerplate/dev_requirements.txt
+RUN pip2 install -r /app/PySpark-Boilerplate/requirements.txt -t ./src
 # Expose ports for monitoring.
 # SparkContext web UI on 4040 -- only available for the duration of the application.
 # Spark master▒s web UI on 8080.

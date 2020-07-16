@@ -1,20 +1,20 @@
-pipeline { 
-  agent any  
-  environment { 
-  repository = 'https://github.com/satyarankireddy/Pyspark_demo'  
+pipeline {
+  agent any
+  environment {
+  repository = 'satyarankireddy/pyspark_demo'
   tag = 'stage'
-  } 
+  }
   stages {
   stage('Git Clone')  {
-  steps {            git credentialsId: 'satyarankireddy', url: 'https://github.com/satyarankireddy/Pyspark_demo.git'
-  }   
-  }   
-  stage('Docker build') 
-  {          steps 
-    {              
-    script {                 
-    docker.build repository + ":$tag"    
-    }    
-    }   
-    } 
+  steps {            git url: 'https://github.com/satyarankireddy/Pyspark_demo.git'
+  }
+  }
+  stage('Docker build')
+  {          steps
+    {
+    sh  """sudo docker build . -t ${repository}:${tag}"""
+    
+    }
+    }
     }}
+
